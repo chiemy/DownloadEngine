@@ -2,7 +2,7 @@ package com.chiemy.downloadengine;
 
 import java.util.List;
 
-final class DownloadEngine implements IDownloadEngine {
+final class DownloadEngine<T extends Downloadable> implements IDownloadEngine<T>{
 	
 	private DownloadEngineConfig mConfig;
 	
@@ -11,11 +11,15 @@ final class DownloadEngine implements IDownloadEngine {
 	}
 	
 	@Override
-	public void start(Downloadable entity) {
+	public void start(T entity) {
+		DownloadInfo info = entity.getDownloadInfo();
+		if (info == null) {
+			entity.setDownloadInfo(new DownloadInfo(entity));
+		}
 	}
 
 	@Override
-	public void pause(Downloadable entity) {
+	public void pause(T entity) {
 	}
 
 	@Override
@@ -23,35 +27,40 @@ final class DownloadEngine implements IDownloadEngine {
 	}
 
 	@Override
-	public void delete(Downloadable entity) {
+	public void delete(T entity) {
 	}
 
 	@Override
-	public DownloadInfo getDownloadInfo(String uniq) {
+	public T getDownloadInfo(String uniq) {
 
 		return null;
 	}
 
 	@Override
-	public List<Downloadable> getAllFinished() {
+	public List<T> getAllFinished() {
 
 		return null;
 	}
 
 	@Override
-	public List<Downloadable> getAllUnFinished() {
+	public List<T> getAllUnFinished() {
 
 		return null;
 	}
 
 	@Override
-	public List<Downloadable> getAll() {
+	public List<T> getAll() {
 
 		return null;
 	}
 
 	@Override
 	public void destroy() {
+	}
+
+	@Override
+	public void setConfig(DownloadEngineConfig config) {
+		this.mConfig = config;
 	}
 
 }

@@ -25,7 +25,7 @@ import android.database.sqlite.SQLiteOpenHelper;
  * database.
  */
 public class DatabaseHelper extends SQLiteOpenHelper {
-    private static final String DATABASE_NAME = "downloader.db";
+    private static final String DATABASE_NAME = "downloadEngine.db";
     private static final int DATABASE_VERSION = 1;
 
     public DatabaseHelper(Context context) {
@@ -51,7 +51,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 				+ DownloadInfoDAO.FINISH_TIME + " text,"
 				+ DownloadInfoDAO.STATUS + " integer,"
 				+ DownloadInfoDAO.URL + " text,"
-				+ DownloadInfoDAO.TYEP+ " text)");
+				+ DownloadInfoDAO.TYEP+ " text,"
+				+ DownloadInfoDAO.ENGINE_TAG + " text)");
 	}
 
 	@Override

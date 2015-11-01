@@ -30,6 +30,7 @@ public class DownloadInfoDAO implements ISql {
 	public static final String TYEP = "type";
 	public static final String URL = "url";
 	public static final String DOWNLOADED_SIZE = "downloadedSize";
+	public static final String ENGINE_TAG = "engine_tag";
 
 	private DatabaseHelper databaseHelper = null;
 

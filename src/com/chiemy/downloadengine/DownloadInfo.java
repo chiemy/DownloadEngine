@@ -23,6 +23,23 @@ public class DownloadInfo {
 	private int status;
 	// 资源类型
 	private int type;
+	private Downloadable entity;
+	
+	DownloadInfo(Downloadable entity){
+		setEntity(entity);
+	}
+	
+	public DownloadInfo(){
+	}
+	
+	void setEntity(Downloadable entity) {
+		this.entity = entity;
+	}
+	
+	Downloadable getEntity() {
+		return entity;
+	}
+	
 	public String getId() {
 		return id;
 	}

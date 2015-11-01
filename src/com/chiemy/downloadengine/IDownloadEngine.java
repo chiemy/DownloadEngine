@@ -7,17 +7,19 @@ import java.util.List;
  * @author chiemy
  *
  */
-public interface IDownloadEngine {
+public interface IDownloadEngine<T extends Downloadable> {
+	
+	void setConfig(DownloadEngineConfig config);
 	/**
 	 * 开始下载
 	 * @param entity
 	 */
-	void start(Downloadable entity);
+	void start(T entity);
 	/**
 	 * 暂停下载
 	 * @param entity
 	 */
-	void pause(Downloadable entity);
+	void pause(T entity);
 	/**
 	 * 暂停所有下载任务
 	 */
@@ -26,29 +28,29 @@ public interface IDownloadEngine {
 	 * 删除下载任务
 	 * @param entity
 	 */
-	void delete(Downloadable entity);
+	void delete(T entity);
 	
 	/**
 	 * 根据下载任务的唯一标识获取下载信息
 	 * @param uniq 下载任务的唯一标识
 	 * @return
 	 */
-	DownloadInfo getDownloadInfo(String uniq);
+	T getDownloadInfo(String uniq);
 	/**
 	 * 获取已完成的任务
 	 * @return
 	 */
-	List<Downloadable> getAllFinished();
+	List<T> getAllFinished();
 	/**
 	 * 获取未下载完成任务
 	 * @return
 	 */
-	List<Downloadable> getAllUnFinished();
+	List<T> getAllUnFinished();
 	/**
 	 * 获取所有下载
 	 * @return
 	 */
-	List<Downloadable> getAll();
+	List<T> getAll();
 	
 	void destroy();
 }
