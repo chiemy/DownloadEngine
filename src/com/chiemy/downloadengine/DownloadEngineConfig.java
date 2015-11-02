@@ -14,11 +14,15 @@ public final class DownloadEngineConfig {
 	final int progressUploadInterval;
 	final int threadPoolSize;
 	final String filePath;
+	final Context context;
+	final UniqType uniqType;
 	
 	private DownloadEngineConfig(final Builder builder){
 		threadPoolSize = builder.threadPoolSize;
 		filePath = builder.filePath;
 		progressUploadInterval = builder.progressUploadInterval;
+		context = builder.context;
+		uniqType = builder.uniqType;
 	}
 	
 	public static class Builder{
@@ -28,6 +32,7 @@ public final class DownloadEngineConfig {
 		private int threadPoolSize = DEFAULT_THREAD_POOL_SIZE;
 		private int progressUploadInterval = DEFAULT_PROGRESS_UPLOAD_INTERVAL;
 		private String filePath;
+		private UniqType uniqType = UniqType.UniqUrl;
 		
 		public Builder(Context context){
 			this.context = context.getApplicationContext();
@@ -38,15 +43,17 @@ public final class DownloadEngineConfig {
 		 * 默认为{@value #DEFAULT_THREAD_POOL_SIZE}
 		 * @param threadPoolSize
 		 */
-		public void setThreadPoolSize(int threadPoolSize) {
+		public Builder setThreadPoolSize(int threadPoolSize) {
 			this.threadPoolSize = threadPoolSize;
+			return this;
 		}
 		/**
 		 * 设置进度条更新的最小时间间隔，单位ms。默认{@value #DEFAULT_PROGRESS_UPLOAD_INTERVAL}ms
 		 * @param progressUploadInterval
 		 */
-		public void setProgressUploadInterval(int progressUploadInterval) {
+		public Builder setProgressUploadInterval(int progressUploadInterval) {
 			this.progressUploadInterval = progressUploadInterval;
+			return this;
 		}
 		
 		/**
@@ -56,6 +63,16 @@ public final class DownloadEngineConfig {
 		 */
 		public Builder setFilePath(String path){
 			filePath = path;
+			return this;
+		}
+		
+		/**
+		 * 设置下载文件保存路径
+		 * @param path
+		 * @return
+		 */
+		public Builder setUniqType(UniqType type){
+			this.uniqType = type;
 			return this;
 		}
 		

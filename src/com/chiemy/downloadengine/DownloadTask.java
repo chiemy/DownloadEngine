@@ -22,14 +22,14 @@ import com.chiemy.downloadengine.error.DownloadException;
 import com.chiemy.downloadengine.error.FileAlreadyExistException;
 import com.chiemy.downloadengine.error.NoMemoryException;
 
-final class DownloadTask<T extends Downloadable> extends
+final class DownloadTask extends
 		AsyncTask<String, Integer, Long> {
 	private URL URL;
 	private String url;
 	private File file, tempFile;
 	private static final String TEMP_SUFFIX = ".download";
 	
-	private DownloadTaskListener<T> listener;
+	private DownloadTaskListener listener;
 	private DownloadInfo downloadInfo;
 
 	public DownloadTask(DownloadInfo info, String downloadPath)
@@ -51,14 +51,14 @@ final class DownloadTask<T extends Downloadable> extends
 		downloadInfo.setFilePath(tempFile.getAbsolutePath());
 	}
 
-	public void setListener(DownloadTaskListener<T> listener) {
+	public void setListener(DownloadTaskListener listener) {
 		this.listener = listener;
 	}
 	
 	@SuppressWarnings("unchecked")
 	private void onStatusChange(DownloadInfo info){
 		if(listener != null){
-			listener.onStatusChange((T)info.getEntity());
+			listener.onStatusChange(info);
 		}
 	}
 
@@ -106,7 +106,7 @@ final class DownloadTask<T extends Downloadable> extends
 			onStatusChange(downloadInfo);
 		}else{
 			if(listener != null){
-				listener.onError((T)downloadInfo.getEntity(), error);
+				listener.onError(downloadInfo, error);
 			}
 		}
 	}

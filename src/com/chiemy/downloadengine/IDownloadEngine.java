@@ -52,5 +52,9 @@ public interface IDownloadEngine<T extends Downloadable> {
 	 */
 	List<T> getAll();
 	
+	void setDownloadEngineListener(DownloadEngineListener<T> listner);
+	
+	DownloadEngineListener<T> getDownloadEngineListener();
+	
 	void destroy();
 }

@@ -1,5 +1,7 @@
 package com.chiemy.downloadengine;
 
+import android.text.TextUtils;
+
 public class DownloadInfo {
 	// id
 	private String id;
@@ -106,6 +108,11 @@ public class DownloadInfo {
 	public void setType(int type) {
 		this.type = type;
 	}
+	
+	public boolean isValidate() {
+		return !TextUtils.isEmpty(url);
+	}
+	
 	private UniqType uniqType = UniqType.UniqUrl;
 	public String getUniq() {
     	String uniq = url;
