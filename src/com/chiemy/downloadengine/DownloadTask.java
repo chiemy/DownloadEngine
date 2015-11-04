@@ -50,6 +50,10 @@ final class DownloadTask extends
 		this.tempFile = new File(downloadPath, fileName + TEMP_SUFFIX);
 		downloadInfo.setFilePath(tempFile.getAbsolutePath());
 	}
+	
+	public DownloadInfo getDownloadInfo() {
+		return downloadInfo;
+	}
 
 	public void setListener(DownloadTaskListener listener) {
 		this.listener = listener;
@@ -91,6 +95,9 @@ final class DownloadTask extends
 	@Override
 	protected void onPostExecute(Long result) {
 		super.onPostExecute(result);
+		if(totalSize < 0){
+			return;
+		}
 		boolean success = (totalSize == currentFileSize && totalSize > 0);
 		String filePath = tempFile.getAbsolutePath();
 		downloadInfo.setTotalSize(totalSize);
@@ -105,6 +112,7 @@ final class DownloadTask extends
 			downloadInfo.setStatus(DownloadStatus.STATUS_FINISHED);
 			onStatusChange(downloadInfo);
 		}else{
+			downloadInfo.setStatus(DownloadStatus.STATUS_FAILED);
 			if(listener != null){
 				listener.onError(downloadInfo, error);
 			}
