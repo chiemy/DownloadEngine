@@ -16,7 +16,7 @@ import com.chiemy.downloadengine.UniqType;
 /**
  * 
  */
-public class DownloadInfoDAO implements ISql {
+public class DownloadInfoDAO{
 	public static final String TABLE_NAME = "downloadTask";
 	private static DownloadInfoDAO instance;
 	public static final String ID = "id";
@@ -64,13 +64,12 @@ public class DownloadInfoDAO implements ISql {
 		return databaseHelper;
 	}
 
-	@Override
 	public void addDownloadTask(DownloadInfo info){
 		if (info == null) {
 			return;
 		}
 		SQLiteDatabase dao = getHelper().getWritableDatabase();
-		DownloadInfo tempInfo = queryDownloadTask(info.getUniq(), info.getUniqType());
+		DownloadInfo tempInfo = queryDownloadTask(info.getEngineId(), info.getUniq(), info.getUniqType());
 		if (tempInfo == null) {
 			ContentValues values = getContentValues(tempInfo);
 			dao.insert(TABLE_NAME, null, values);
@@ -79,7 +78,6 @@ public class DownloadInfoDAO implements ISql {
 		}
 	}
 
-	@Override
 	public void updateDownloadTask(DownloadInfo info) {
 		if (info == null) {
 			return;
@@ -91,27 +89,21 @@ public class DownloadInfoDAO implements ISql {
 		dao.update(TABLE_NAME, values, key + "=?", whereArgs);
 	}
 	
-
-	@Override
-	public DownloadInfo queryDownloadTask(String url){
-		return queryDownloadTask(url, UniqType.UniqUrl);
-	}
-	
 	/**
 	 * 
 	 * @param uniq 查询标识
 	 * @param url 标识是否为url,如果不是，则按id处理
 	 * @return
 	 */
-	public synchronized DownloadInfo queryDownloadTask(String uniq, UniqType type){
+	public synchronized DownloadInfo queryDownloadTask(String engineId, String uniq, UniqType type){
 		DownloadInfo ttask = null;
 		SQLiteDatabase dao = getHelper().getReadableDatabase();
 		String key = URL;
 		if(type == UniqType.UniqId){
 			key = ID;
 		}
-		String selection = key + "=?";
-		String selectionArgs[] = {uniq};
+		String selection = key + "=? AND " + ENGINE_TAG + " = ?";
+		String selectionArgs[] = {uniq, engineId};
 		Cursor cursor = dao.query(TABLE_NAME, null, selection, selectionArgs, null, null, null);
 		if (null != cursor) {
 			cursor.moveToFirst();
@@ -123,7 +115,6 @@ public class DownloadInfoDAO implements ISql {
 		return ttask;
 	}
 
-	@Override
 	public void deleteDownloadTask(DownloadInfo task){
 		if(task == null){
 			return;
@@ -142,7 +133,6 @@ public class DownloadInfoDAO implements ISql {
 	}
 	
 
-	@Override
 	public List<DownloadInfo> queryAllUnFinishTask(){
 		List<DownloadInfo> tasks = null;
 		try {
@@ -153,11 +143,10 @@ public class DownloadInfoDAO implements ISql {
 		return tasks;
 	}
 	
-	@Override
-	public List<DownloadInfo> queryAllFinishedTask() { 
+	public List<DownloadInfo> queryAllFinishedTask(String engineId) { 
 		List<DownloadInfo> tasks = null;
 		try {
-			tasks = queryByWhere(STATUS + "=?", String.valueOf(DownloadStatus.STATUS_FINISHED));
+			tasks = queryByWhere(STATUS + "=? AND " + ENGINE_TAG + "=?", String.valueOf(DownloadStatus.STATUS_FINISHED), engineId);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -203,7 +192,7 @@ public class DownloadInfoDAO implements ISql {
 	
 
 	private ContentValues getContentValues(DownloadInfo info) {
-		ContentValues values = new ContentValues(10);
+		ContentValues values = new ContentValues(11);
 		values.put(ID, info.getId());
 		values.put(NAME, info.getFileName());
 		values.put(PATH, info.getFilePath());
@@ -214,7 +203,7 @@ public class DownloadInfoDAO implements ISql {
 		values.put(STATUS, info.getStatus());
 		values.put(TYEP, info.getType());
 		values.put(URL, info.getUrl());
-		
+		values.put(ENGINE_TAG, info.getEngineId());
 		return values;
 	}
 
@@ -231,6 +220,7 @@ public class DownloadInfoDAO implements ISql {
 		task.setUrl(cursor.getString(cursor.getColumnIndex(URL)));
 		task.setDownloadSize(cursor.getLong(cursor
 				.getColumnIndex(DOWNLOADED_SIZE)));
+		task.setEngineId(cursor.getString(cursor.getColumnIndex(ENGINE_TAG)));
 		return task;
 	}
 

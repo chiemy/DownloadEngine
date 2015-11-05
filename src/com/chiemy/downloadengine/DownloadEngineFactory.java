@@ -35,13 +35,13 @@ public final class DownloadEngineFactory {
 	 * @param tag
 	 * @return
 	 */
-	public synchronized IDownloadEngine getDownloadEngine(String tag){
-		IDownloadEngine engine = enginesMap.get(tag);
+	public synchronized IDownloadEngine getDownloadEngine(String id){
+		IDownloadEngine engine = enginesMap.get(id);
 		if(engine == null){
 			if (mConfig == null) {
 				throw new IllegalArgumentException(ERROR_INIT_CONFIG_WITH_NULL);
 			}
-			engine = new DownloadEngine(mConfig);
+			engine = new DownloadEngine(id, mConfig);
 		}
 		return engine;
 	}

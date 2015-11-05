@@ -35,7 +35,7 @@ public interface IDownloadEngine<T extends Downloadable> {
 	 * @param uniq 下载任务的唯一标识
 	 * @return
 	 */
-	T getDownloadInfo(String uniq);
+	DownloadInfo getDownloadInfo(String uniq);
 	/**
 	 * 获取已完成的任务
 	 * @return

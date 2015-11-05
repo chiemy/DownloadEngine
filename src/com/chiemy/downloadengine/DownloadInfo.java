@@ -109,6 +109,15 @@ public class DownloadInfo {
 		this.type = type;
 	}
 	
+	private String engineId; // 下载引擎的标识
+	public void setEngineId(String id) {
+		engineId = id;
+	}
+	
+	public String getEngineId(){
+		return engineId;
+	}
+	
 	public boolean isValidate() {
 		return !TextUtils.isEmpty(url);
 	}
