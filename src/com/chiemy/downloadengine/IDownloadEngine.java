@@ -40,17 +40,17 @@ public interface IDownloadEngine<T extends Downloadable> {
 	 * 获取已完成的任务
 	 * @return
 	 */
-	List<T> getAllFinished();
+	List<DownloadInfo> getAllFinished();
 	/**
 	 * 获取未下载完成任务
 	 * @return
 	 */
-	List<T> getAllUnFinished();
+	List<DownloadInfo> getAllUnFinished();
 	/**
 	 * 获取所有下载
 	 * @return
 	 */
-	List<T> getAll();
+	List<DownloadInfo> getAll();
 	
 	void setDownloadEngineListener(DownloadEngineListener<T> listner);
 	

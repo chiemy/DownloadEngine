@@ -133,10 +133,10 @@ public class DownloadInfoDAO{
 	}
 	
 
-	public List<DownloadInfo> queryAllUnFinishTask(){
+	public List<DownloadInfo> queryAllUnFinishTask(String engineId){
 		List<DownloadInfo> tasks = null;
 		try {
-			tasks = queryByWhere(STATUS + "<>?", String.valueOf(DownloadStatus.STATUS_FINISHED));
+			tasks = queryByWhere(STATUS + "<>? AND " + ENGINE_TAG + "=?", String.valueOf(DownloadStatus.STATUS_FINISHED), engineId);
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

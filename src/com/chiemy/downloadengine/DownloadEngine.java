@@ -7,7 +7,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -18,7 +17,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.text.TextUtils;
-import android.util.Log;
 
 import com.chiemy.downloadengine.db.DownloadInfoDAO;
 
@@ -34,7 +32,7 @@ final class DownloadEngine<T extends Downloadable> implements
 	private DownloadEngineConfig mConfig;
 	private DownloadInfoDAO infoDAO;
 	private Map<String, DownloadTask> taskMap;
-	private List<T> unfinishedList, finishedList;
+	private List<DownloadInfo> unfinishedList, finishedList;
 
 	private static final int MSG_TASK = 1;
 	private static final int MSG_STATUS_CHANGE = 2;
@@ -64,12 +62,14 @@ final class DownloadEngine<T extends Downloadable> implements
 		infoDAO = DownloadInfoDAO.getInstance(config.context);
 		taskMap = new HashMap<String, DownloadTask>();
 		mUpdateInterval = mConfig.progressUploadInterval;
-		unfinishedList = new ArrayList<T>();
-		finishedList = new ArrayList<T>();
+		unfinishedList = new ArrayList<DownloadInfo>();
+		finishedList = new ArrayList<DownloadInfo>();
+		init();
 	}
 	
 	private void init(){
-		//finishedList.addAll(infoDAO.queryAllFinishedTask(id));
+		finishedList.addAll(infoDAO.queryAllFinishedTask(id));
+		unfinishedList.addAll(infoDAO.queryAllUnFinishTask(id));
 	}
 
 	@Override
@@ -85,7 +85,7 @@ final class DownloadEngine<T extends Downloadable> implements
 				info.setUniqType(mConfig.uniqType);
 				entity.setDownloadInfo(info);
 				infoDAO.addDownloadTask(info);
-				unfinishedList.add(entity);
+				unfinishedList.add(info);
 			}
 		}
 		info.setStatus(DownloadStatus.STATUS_WAIT);
@@ -156,6 +156,8 @@ final class DownloadEngine<T extends Downloadable> implements
 			DownloadTask task = taskMap.get(entity.getDownloadInfo().getUniq());
 			if (task != null) {
 				task.cancel(true);
+			}else{
+				taskMap.remove(info.getUniq());
 			}
 		} else {
 			info = queryDownloadInfo(entity);
@@ -179,23 +181,30 @@ final class DownloadEngine<T extends Downloadable> implements
 	}
 
 	@Override
-	public List<T> getAllFinished() {
+	public List<DownloadInfo> getAllFinished() {
 		return finishedList;
 	}
 
 	@Override
-	public List<T> getAllUnFinished() {
+	public List<DownloadInfo> getAllUnFinished() {
 		return unfinishedList;
 	}
 	
 	@Override
-	public List<T> getAll() {
-
-		return null;
+	public List<DownloadInfo> getAll() {
+		List<DownloadInfo> tasks = new ArrayList<DownloadInfo>();
+		tasks.addAll(finishedList);
+		tasks.addAll(unfinishedList);
+		return tasks;
 	}
 
 	@Override
 	public void destroy() {
+		taskMap.clear();
+		mListener = null;
+		pauseAll();
+		finishedList.clear();
+		unfinishedList.clear();
 	}
 
 	@Override
@@ -238,8 +247,8 @@ final class DownloadEngine<T extends Downloadable> implements
 			info.setEndTime(System.currentTimeMillis());
 			infoDAO.updateDownloadTask(info);
 			taskMap.remove(info.getUniq());
-			unfinishedList.remove(info.getEntity());
-			finishedList.add((T) info.getEntity());
+			unfinishedList.remove(info);
+			finishedList.add(info);
 			if (mListener != null) {
 				mListener.onStatusChange(this, (T) info.getEntity());
 			}
