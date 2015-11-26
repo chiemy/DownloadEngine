@@ -7,11 +7,11 @@ import java.util.Map;
 public final class DownloadEngineFactory {
 	private static final String ERROR_INIT_CONFIG_WITH_NULL = "downloadengine configuration can not be initialized with null";
 	private DownloadEngineConfig mConfig;
-	private Map<String, IDownloadEngine> enginesMap;
+	private Map<String, DownloadEngine> enginesMap;
 	private static DownloadEngineFactory instance;
 	
 	private DownloadEngineFactory(){
-		enginesMap = new HashMap<String, IDownloadEngine>();
+		enginesMap = new HashMap<String, DownloadEngine>();
 	}
 	
 	public static synchronized DownloadEngineFactory getInstance(){
@@ -35,13 +35,13 @@ public final class DownloadEngineFactory {
 	 * @param tag
 	 * @return
 	 */
-	public synchronized IDownloadEngine getDownloadEngine(String id){
-		IDownloadEngine engine = enginesMap.get(id);
+	public synchronized <T extends Downloadable> DownloadEngine<T> getDownloadEngine(String id){
+		DownloadEngine<T> engine = enginesMap.get(id);
 		if(engine == null){
 			if (mConfig == null) {
 				throw new IllegalArgumentException(ERROR_INIT_CONFIG_WITH_NULL);
 			}
-			engine = new DownloadEngine(id, mConfig);
+			engine = new DownloadEngine<T>(id, mConfig);
 		}
 		return engine;
 	}

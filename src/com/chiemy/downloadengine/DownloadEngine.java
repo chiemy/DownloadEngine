@@ -20,7 +20,7 @@ import android.text.TextUtils;
 
 import com.chiemy.downloadengine.db.DownloadInfoDAO;
 
-final class DownloadEngine<T extends Downloadable> implements
+public final class DownloadEngine<T extends Downloadable> implements
 		IDownloadEngine<T>, DownloadTaskListener {
 	private static ExecutorService LIMITED_TASK_EXECUTOR;
 	private static final int DEFAULT_TASK_NUM = 1;
@@ -56,7 +56,7 @@ final class DownloadEngine<T extends Downloadable> implements
 	};
 
 	private String id;
-	public DownloadEngine(String id, DownloadEngineConfig config) {
+	DownloadEngine(String id, DownloadEngineConfig config) {
 		this.id = id;
 		mConfig = config;
 		infoDAO = DownloadInfoDAO.getInstance(config.context);
@@ -82,6 +82,7 @@ final class DownloadEngine<T extends Downloadable> implements
 			info = queryDownloadInfo(entity);
 			if (info == null) {
 				info = new DownloadInfo(entity);
+				info.setEngineId(id);
 				info.setUniqType(mConfig.uniqType);
 				entity.setDownloadInfo(info);
 				infoDAO.addDownloadTask(info);
@@ -108,6 +109,7 @@ final class DownloadEngine<T extends Downloadable> implements
 		}
 		try {
 			final DownloadTask task = new DownloadTask(info, mConfig.filePath);
+			task.setListener(this);
 			taskMap.put(info.getUniq(), task);
 			Message msg = handler.obtainMessage(MSG_TASK);
 			msg.obj = task;
@@ -146,6 +148,26 @@ final class DownloadEngine<T extends Downloadable> implements
 		Iterator<String> iterator = set.iterator();
 		while (iterator.hasNext()) {
 			pause(taskMap.get(iterator.next()));
+		}
+	}
+	
+	@Override
+	public void toggle(T entity) {
+		if (entity == null) {
+			return;
+		}
+		if (entity.getDownloadInfo() == null) { // 没有下载信息
+			start(entity);
+		}else{
+			DownloadTask tempTask = taskMap.get(entity.getDownloadInfo().getUniq());
+			if (tempTask != null && tempTask.getDownloadInfo() != null) {
+				if (tempTask.getDownloadInfo().getStatus() == DownloadStatus.STATUS_RUNNING
+						|| tempTask.getDownloadInfo().getStatus() == DownloadStatus.STATUS_WAIT) { // 状态为正在下载或等待中，则暂停下载
+					pause(entity);
+				} else {
+					start(entity);
+				}
+			}
 		}
 	}
 

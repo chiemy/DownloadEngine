@@ -36,6 +36,8 @@ public class DownloadInfo {
 	
 	void setEntity(Downloadable entity) {
 		this.entity = entity;
+		this.id = entity.getId();
+		this.url = entity.getDownloadUrl();
 	}
 	
 	Downloadable getEntity() {

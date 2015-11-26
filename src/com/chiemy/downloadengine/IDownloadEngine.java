@@ -29,6 +29,10 @@ public interface IDownloadEngine<T extends Downloadable> {
 	 * @param entity
 	 */
 	void delete(T entity);
+	/**
+	 * 切换开始、暂停
+	 */
+	void toggle(T entity);
 	
 	/**
 	 * 根据下载任务的唯一标识获取下载信息

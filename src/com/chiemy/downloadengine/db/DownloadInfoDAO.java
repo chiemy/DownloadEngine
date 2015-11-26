@@ -71,7 +71,7 @@ public class DownloadInfoDAO{
 		SQLiteDatabase dao = getHelper().getWritableDatabase();
 		DownloadInfo tempInfo = queryDownloadTask(info.getEngineId(), info.getUniq(), info.getUniqType());
 		if (tempInfo == null) {
-			ContentValues values = getContentValues(tempInfo);
+			ContentValues values = getContentValues(info);
 			dao.insert(TABLE_NAME, null, values);
 		} else {
 			updateDownloadTask(info);
