@@ -1,5 +1,17 @@
 package com.chiemy.downloadengine;
 
+import android.accounts.NetworkErrorException;
+import android.annotation.TargetApi;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
+import android.text.TextUtils;
+
+import com.chiemy.downloadengine.error.DownloadException;
+import com.chiemy.downloadengine.error.FileAlreadyExistException;
+import com.chiemy.downloadengine.error.NoMemoryException;
+
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -12,18 +24,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
 
-import android.accounts.NetworkErrorException;
-import android.annotation.TargetApi;
-import android.os.AsyncTask;
-import android.os.Build;
-import android.text.TextUtils;
-
-import com.chiemy.downloadengine.error.DownloadException;
-import com.chiemy.downloadengine.error.FileAlreadyExistException;
-import com.chiemy.downloadengine.error.NoMemoryException;
-
-final class DownloadTask extends
-		AsyncTask<String, Integer, Long> {
+final class DownloadTask implements Runnable {
 	private URL URL;
 	private String url;
 	private File file, tempFile;
@@ -31,6 +32,27 @@ final class DownloadTask extends
 	
 	private DownloadTaskListener listener;
 	private DownloadInfo downloadInfo;
+	private boolean isRunning;
+
+	private static final int MSG_STATUS_CHANGED = 1;
+	private static final int MSG_ERROR = 2;
+	private Handler handler = new Handler(Looper.getMainLooper()) {
+		@Override
+		public void handleMessage(Message msg) {
+			switch (msg.what) {
+				case MSG_STATUS_CHANGED:
+					if(listener != null){
+						listener.onStatusChange(downloadInfo);
+					}
+					break;
+				case MSG_ERROR:
+					if(listener != null){
+						listener.onError(downloadInfo, (Throwable) msg.obj);
+					}
+					break;
+			}
+		}
+	};
 
 	public DownloadTask(DownloadInfo info, String downloadPath)
 			throws MalformedURLException {
@@ -58,24 +80,31 @@ final class DownloadTask extends
 	public void setListener(DownloadTaskListener listener) {
 		this.listener = listener;
 	}
-	
-	@SuppressWarnings("unchecked")
-	private void onStatusChange(DownloadInfo info){
-		if(listener != null){
-			listener.onStatusChange(info);
-		}
+
+	public boolean isRunning() {
+		return isRunning;
 	}
 
-	/**
-	 * 
-	 */
-	protected void onPreExecute() {
-		super.onPreExecute();
-		interrupt = false;
+	private void onStatusChange(){
+		Message msg = handler.obtainMessage(MSG_STATUS_CHANGED);
+		handler.sendMessage(msg);
+	}
+
+	private void onError(Throwable t) {
+		Message msg = handler.obtainMessage(MSG_ERROR);
+		msg.obj = t;
+		handler.sendMessage(msg);
+	}
+
+	@Override
+	public void run() {
+		isRunning = true;
+		long result = doInBackground();
+		isRunning = false;
+		onPostExecute(result);
 	}
 
 	private Throwable error;
-	@Override
 	protected Long doInBackground(String... params) {
 		long result = 0;
 		try {
@@ -92,47 +121,38 @@ final class DownloadTask extends
 		return result;
 	}
 
-	@Override
 	protected void onPostExecute(Long result) {
-		super.onPostExecute(result);
 		if(totalSize < 0){
 			return;
 		}
 		boolean success = (totalSize == currentFileSize && totalSize > 0);
-		String filePath = tempFile.getAbsolutePath();
 		downloadInfo.setTotalSize(totalSize);
 		downloadInfo.setDownloadSize(currentFileSize);
 		downloadInfo.setSpeed(0);
 		downloadInfo.setStatus(DownloadStatus.STATUS_STOPPED);
-		onStatusChange(downloadInfo);
+		onStatusChange();
 		if(success){
 			tempFile.renameTo(file);
-			filePath = file.getAbsolutePath();
+			String filePath = tempFile.getAbsolutePath();
 			downloadInfo.setFilePath(filePath);
 			downloadInfo.setStatus(DownloadStatus.STATUS_FINISHED);
-			onStatusChange(downloadInfo);
+			onStatusChange();
 		}else{
 			downloadInfo.setStatus(DownloadStatus.STATUS_FAILED);
-			if(listener != null){
-				listener.onError(downloadInfo, error);
-			}
+			onError(error);
 		}
 	}
 	
 	private boolean interrupt = false;
-	@Override
-	protected void onCancelled() {
-		super.onCancelled();
+	public void cancel() {
 		interrupt = true;
 		downloadInfo.setStatus(DownloadStatus.STATUS_CANCEL);
 		downloadInfo.setSpeed(0);
-		onStatusChange(downloadInfo);
+		onStatusChange();
 	}
 	
 	private long previousTime;
-	@Override
 	protected void onProgressUpdate(Integer... values) {
-		super.onProgressUpdate(values);
 		int downloadSize = values[0];
 		int read = values[1];
 		long currentTime = System.currentTimeMillis();
@@ -148,19 +168,14 @@ final class DownloadTask extends
 		downloadInfo.setTotalSize(totalSize);
 		downloadInfo.setDownloadSize(downloadSize + previousFileSize);
 		downloadInfo.setSpeed(speed);
-		onStatusChange(downloadInfo);
+		onStatusChange();
 	}
 	
 	private HttpURLConnection connection;
 	private long totalSize, currentFileSize, previousFileSize;
 	private boolean finishIfFileExist;
 	private Long download() throws IOException, NetworkErrorException, DownloadException {
-		connection = (HttpURLConnection) URL.openConnection();
-		connection.setConnectTimeout(10*1000);
-		connection.setReadTimeout(10 * 1000);
-		connection.setRequestProperty("User-Agent", "Mobile");
-		connection.setRequestProperty("Connection", "Keep-Alive");
-		connection.setRequestMethod("GET");
+		connection = createConnection();
 		totalSize = connection.getContentLength();
 
 		if (file.exists() && totalSize == file.length()) {
@@ -178,13 +193,8 @@ final class DownloadTask extends
 			}
 			connection.disconnect();
 			this.URL = new URL(url);
-			connection = (HttpURLConnection) URL.openConnection();
-			connection.setConnectTimeout(10*1000);
-			connection.setReadTimeout(10 * 1000);
+			connection = createConnection();
 			connection.setRequestProperty("RANGE", "bytes=" + tempFile.length()+ "-");
-			connection.setRequestProperty("User-Agent", "Mobile");
-			connection.setRequestProperty("Connection", "Keep-Alive");
-			connection.setRequestMethod("GET");
 		}
 		
 		checkUsableSpace();
@@ -192,19 +202,29 @@ final class DownloadTask extends
 		RandomAccessFile outputStream = new ProgressReportingRandomAccessFile(
 				tempFile, "rw");
 		if(totalSize > 0){
-			publishProgress(0, 0);
+			onProgressUpdate(0, 0);
 		}
 
 		InputStream in = connection.getInputStream();
 		long bytesCopied = copy(in, outputStream);
 
 		currentFileSize = previousFileSize + bytesCopied;
-		publishProgress((int)currentFileSize, 0);
+		onProgressUpdate((int)currentFileSize, 0);
 		
 		if (currentFileSize != totalSize && totalSize != -1 && !interrupt) {
 			throw new IOException("Download incomplete: " + bytesCopied + " != " + totalSize);
 		}
 		return currentFileSize;
+	}
+
+	private HttpURLConnection createConnection() throws IOException {
+		HttpURLConnection connection = (HttpURLConnection) URL.openConnection();
+		connection.setConnectTimeout(10*1000);
+		connection.setReadTimeout(10 * 1000);
+		connection.setRequestProperty("User-Agent", "Mobile");
+		connection.setRequestProperty("Connection", "Keep-Alive");
+		connection.setRequestMethod("GET");
+		return connection;
 	}
 	
 	@TargetApi(Build.VERSION_CODES.GINGERBREAD)
@@ -232,10 +252,6 @@ final class DownloadTask extends
 				}
 				out.write(buffer, 0, n);
 				count += n;
-				if(isCancelled()){
-					interrupt = true;
-					break;
-				}
 			}
 		} catch (IOException e) {
 			error = e;
@@ -266,7 +282,7 @@ final class DownloadTask extends
 				throws IOException {
 			super.write(buffer, offset, count);
 			progress += count;
-			publishProgress(progress, count);
+			onProgressUpdate(progress, count);
 		}
 	}
 

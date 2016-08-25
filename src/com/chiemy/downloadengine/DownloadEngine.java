@@ -1,5 +1,12 @@
 package com.chiemy.downloadengine;
 
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
+import android.text.TextUtils;
+
+import com.chiemy.downloadengine.db.DownloadInfoDAO;
+
 import java.io.File;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
@@ -11,23 +18,11 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import android.annotation.TargetApi;
-import android.os.Build;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.Message;
-import android.text.TextUtils;
-
-import com.chiemy.downloadengine.db.DownloadInfoDAO;
-
 public final class DownloadEngine<T extends Downloadable> implements
 		IDownloadEngine<T>, DownloadTaskListener {
-	private static ExecutorService LIMITED_TASK_EXECUTOR;
 	private static final int DEFAULT_TASK_NUM = 1;
-	static {
-		LIMITED_TASK_EXECUTOR = (ExecutorService) Executors
-				.newFixedThreadPool(DEFAULT_TASK_NUM);
-	}
+
+	private static ExecutorService executorService;
 
 	private DownloadEngineConfig mConfig;
 	private DownloadInfoDAO infoDAO;
@@ -36,17 +31,14 @@ public final class DownloadEngine<T extends Downloadable> implements
 
 	private static final int MSG_TASK = 1;
 	private static final int MSG_STATUS_CHANGE = 2;
+
 	private Handler handler = new Handler(Looper.getMainLooper()) {
 		@SuppressWarnings("unchecked")
 		public void handleMessage(android.os.Message msg) {
 			if (msg.what == MSG_TASK) {
 				DownloadTask task = (DownloadTask) msg.obj;
 				// 开启下载任务
-				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
-					forAPI11(task);
-				} else {
-					task.execute("");
-				}
+				executorService.execute(task);
 				onStatusChange(task.getDownloadInfo());
 			}else if(msg.what == MSG_STATUS_CHANGE){
 				DownloadInfo info = (DownloadInfo) msg.obj;
@@ -64,6 +56,11 @@ public final class DownloadEngine<T extends Downloadable> implements
 		mUpdateInterval = mConfig.progressUploadInterval;
 		unfinishedList = new ArrayList<DownloadInfo>();
 		finishedList = new ArrayList<DownloadInfo>();
+		int threadPoolSize = mConfig.threadPoolSize;
+		if (threadPoolSize <= 0) {
+			threadPoolSize = DEFAULT_TASK_NUM;
+		}
+		executorService = Executors.newFixedThreadPool(threadPoolSize);
 		init();
 	}
 	
@@ -104,8 +101,8 @@ public final class DownloadEngine<T extends Downloadable> implements
 
 	private void start(DownloadInfo info) {
 		DownloadTask tempTask = taskMap.get(info.getUniq());
-		if (tempTask != null) {
-			tempTask.cancel(true);
+		if (tempTask != null && tempTask.isRunning()) {
+			return;
 		}
 		try {
 			final DownloadTask task = new DownloadTask(info, mConfig.filePath);
@@ -119,11 +116,6 @@ public final class DownloadEngine<T extends Downloadable> implements
 		}
 	}
 
-	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
-	private void forAPI11(DownloadTask task) {
-		task.executeOnExecutor(LIMITED_TASK_EXECUTOR, "");
-	}
-
 	@Override
 	public void pause(T entity) {
 		if (entity.getDownloadInfo() != null) {
@@ -134,7 +126,7 @@ public final class DownloadEngine<T extends Downloadable> implements
 	
 	private void pause(DownloadTask task){
 		if (task != null) {
-			task.cancel(true);
+			task.cancel();
 			task.getDownloadInfo().setStatus(DownloadStatus.STATUS_STOPPED);
 			final Message msg = handler.obtainMessage(MSG_STATUS_CHANGE);
 			msg.obj = task.getDownloadInfo();
@@ -158,11 +150,10 @@ public final class DownloadEngine<T extends Downloadable> implements
 		}
 		if (entity.getDownloadInfo() == null) { // 没有下载信息
 			start(entity);
-		}else{
+		} else {
 			DownloadTask tempTask = taskMap.get(entity.getDownloadInfo().getUniq());
 			if (tempTask != null && tempTask.getDownloadInfo() != null) {
-				if (tempTask.getDownloadInfo().getStatus() == DownloadStatus.STATUS_RUNNING
-						|| tempTask.getDownloadInfo().getStatus() == DownloadStatus.STATUS_WAIT) { // 状态为正在下载或等待中，则暂停下载
+				if (tempTask.isRunning()) {
 					pause(entity);
 				} else {
 					start(entity);
@@ -177,19 +168,21 @@ public final class DownloadEngine<T extends Downloadable> implements
 		if (info != null) {
 			DownloadTask task = taskMap.get(entity.getDownloadInfo().getUniq());
 			if (task != null) {
-				task.cancel(true);
-			}else{
+				task.cancel();
+			} else {
 				taskMap.remove(info.getUniq());
 			}
 		} else {
 			info = queryDownloadInfo(entity);
-			info.setUniqType(mConfig.uniqType);
+			if (info != null) {
+				info.setUniqType(mConfig.uniqType);
+			}
 		}
-		if(info != null){
-			unfinishedList.remove(entity);
+		if(info != null) {
+			unfinishedList.remove(entity.getDownloadInfo());
 			if (!TextUtils.isEmpty(info.getFilePath())) {
 				File file = new File(info.getFilePath());
-				if (file != null && file.exists()) {
+				if (file.exists()) {
 					file.delete();
 				}
 			}

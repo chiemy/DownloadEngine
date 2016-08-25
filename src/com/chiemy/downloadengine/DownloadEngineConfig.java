@@ -68,7 +68,7 @@ public final class DownloadEngineConfig {
 		
 		/**
 		 * 设置下载文件保存路径
-		 * @param path
+		 * @param type
 		 * @return
 		 */
 		public Builder setUniqType(UniqType type){
